@@ -16,6 +16,7 @@ struct ClaudeAPIRequest: Codable {
 class ClaudeService {
     private let knowledgeBase: KnowledgeBaseService
     private let mcpService: MCPService
+    private let skillService: SkillService
     private var conversationHistory: [ClaudeAPIMessage] = []
 
     // Bedrock configuration (matches Claude Code setup)
@@ -23,9 +24,10 @@ class ClaudeService {
     private let modelID: String
     private let authToken: String
 
-    init(knowledgeBase: KnowledgeBaseService, mcpService: MCPService) {
+    init(knowledgeBase: KnowledgeBaseService, mcpService: MCPService, skillService: SkillService) {
         self.knowledgeBase = knowledgeBase
         self.mcpService = mcpService
+        self.skillService = skillService
 
         // Use same configuration as Claude Code (ANTHROPIC_BASE_URL, not BEDROCK)
         let baseURL = "https://eng-ai-model-gateway.sfproxy.devx-preprod.aws-esvc1-useast2.aws.sfdc.cl"
@@ -64,9 +66,6 @@ class ClaudeService {
         // Stream response
         return AsyncStream { continuation in
             Task {
-                // Provide early feedback
-                continuation.yield("Connecting to Claude...")
-
                 do {
                     // Use a custom session with timeout configuration
                     let config = URLSessionConfiguration.default
@@ -182,6 +181,20 @@ class ClaudeService {
 
             # Today's Summary
             \(summary)
+            """
+        }
+
+        // Add available skills
+        if !skillService.availableSkills.isEmpty {
+            prompt += """
+
+
+            # Available Skills
+            You have access to the following executable skills:
+            \(skillService.availableSkills.map { "- \($0.name): \($0.description)" }.joined(separator: "\n"))
+
+            When the user asks you to run a workflow or perform automation, mention that you can execute these skills.
+            Note: Skill execution is not yet implemented in the streaming API, so for now just mention what the skill would do.
             """
         }
 

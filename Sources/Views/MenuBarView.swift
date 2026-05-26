@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @State private var inputText: String = ""
+    @FocusState private var isInputFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -11,11 +12,6 @@ struct MenuBarView: View {
                 Text("🧠 AI Brain")
                     .font(.headline)
                 Spacer()
-                Button(action: { NSApplication.shared.terminate(nil) }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
             }
             .padding()
 
@@ -32,7 +28,6 @@ struct MenuBarView: View {
                     }
                     .padding()
                 }
-                .frame(height: 400)
                 .onChange(of: appState.messages.count) {
                     if let lastMessage = appState.messages.last {
                         withAnimation {
@@ -47,7 +42,8 @@ struct MenuBarView: View {
             // Input area
             HStack {
                 TextField("Ask me anything...", text: $inputText)
-                    .textFieldStyle(.plain)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($isInputFocused)
                     .onSubmit {
                         sendMessage()
                     }
@@ -79,7 +75,11 @@ struct MenuBarView: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
         }
-        .frame(width: 500, height: 600)
+        .frame(minWidth: 600, minHeight: 700)
+        .navigationTitle("AI Brain Assistant")
+        .onAppear {
+            isInputFocused = true
+        }
     }
 
     private func sendMessage() {

@@ -9,20 +9,26 @@ class AppState: ObservableObject {
     let claudeService: ClaudeService
     let knowledgeBaseService: KnowledgeBaseService
     let mcpService: MCPService
+    let skillService: SkillService
 
     private var currentTask: Task<Void, Never>?
 
     init() {
         let basePath = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("knowledge-base").path
+            .appendingPathComponent("code/github.com/rodfrancisco/knowledge-base").path
 
         self.knowledgeBasePath = basePath
         self.knowledgeBaseService = KnowledgeBaseService(basePath: basePath)
         self.mcpService = MCPService()
+        self.skillService = SkillService(knowledgeBasePath: basePath)
         self.claudeService = ClaudeService(
             knowledgeBase: knowledgeBaseService,
-            mcpService: mcpService
+            mcpService: mcpService,
+            skillService: skillService
         )
+
+        // Load skills on init
+        _ = skillService.loadSkills()
     }
 
     func sendMessage(_ text: String) async {
