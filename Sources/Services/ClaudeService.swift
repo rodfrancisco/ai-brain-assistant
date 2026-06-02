@@ -42,8 +42,8 @@ class ClaudeService {
         // Add user message to history
         conversationHistory.append(ClaudeAPIMessage(role: "user", content: text))
 
-        // Build system prompt with knowledge base context
-        let systemPrompt = buildSystemPrompt()
+        // Build system prompt with knowledge base context (async now)
+        let systemPrompt = await buildSystemPromptAsync()
 
         // Create request (Bedrock format)
         let request = ClaudeAPIRequest(
@@ -59,7 +59,7 @@ class ClaudeService {
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         urlRequest.setValue(authToken, forHTTPHeaderField: "x-api-key")
-        urlRequest.timeoutInterval = 30.0 // 30 second timeout
+        urlRequest.timeoutInterval = 10.0 // Short timeout
 
         urlRequest.httpBody = try JSONEncoder().encode(request)
 
@@ -67,13 +67,15 @@ class ClaudeService {
         return AsyncStream { continuation in
             Task {
                 do {
-                    // Use a custom session with timeout configuration
+
+                    // Use a custom session with shorter timeout configuration
                     let config = URLSessionConfiguration.default
-                    config.timeoutIntervalForRequest = 30.0
-                    config.timeoutIntervalForResource = 300.0
+                    config.timeoutIntervalForRequest = 10.0  // Reduced from 30s
+                    config.timeoutIntervalForResource = 60.0  // Reduced from 300s
                     let session = URLSession(configuration: config)
 
                     let (asyncBytes, response) = try await session.bytes(for: urlRequest)
+                    continuation.yield("Connected! Streaming response...\n")
 
                     guard let httpResponse = response as? HTTPURLResponse else {
                         continuation.yield("\n\nError: Invalid HTTP response\n")
@@ -132,14 +134,15 @@ class ClaudeService {
         }
     }
 
-    private func buildSystemPrompt() -> String {
-        // Load ALL context from knowledge base
-        let profile = knowledgeBase.loadProfile() ?? "No profile available"
-        let initiatives = knowledgeBase.loadCurrentInitiatives() ?? "No initiatives available"
-        let stakeholders = knowledgeBase.loadStakeholderMap() ?? "No stakeholder map available"
-        let toneOfVoice = knowledgeBase.loadToneOfVoice()
-        let technicalDomains = knowledgeBase.loadTechnicalDomains()
-        let todaysSummary = knowledgeBase.loadTodaysSummary()
+    // Async version - loads files on background thread
+    private func buildSystemPromptAsync() async -> String {
+        // Load ALL context from knowledge base asynchronously
+        let profile = await knowledgeBase.loadProfileAsync() ?? "No profile available"
+        let initiatives = await knowledgeBase.loadCurrentInitiativesAsync() ?? "No initiatives available"
+        let stakeholders = await knowledgeBase.loadStakeholderMapAsync() ?? "No stakeholder map available"
+        let toneOfVoice = await knowledgeBase.loadToneOfVoiceAsync()
+        let technicalDomains = await knowledgeBase.loadTechnicalDomainsAsync()
+        let todaysSummary = await knowledgeBase.loadTodaysSummaryAsync()
 
         var prompt = """
         You are Rod Francisco's personal AI assistant with full access to his work context.

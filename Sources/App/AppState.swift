@@ -27,8 +27,8 @@ class AppState: ObservableObject {
             skillService: skillService
         )
 
-        // Load skills on init
-        _ = skillService.loadSkills()
+        // Note: Skills and cache will load lazily on first use
+        // This prevents blocking the main thread during initialization
     }
 
     func sendMessage(_ text: String) async {

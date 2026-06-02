@@ -66,6 +66,12 @@ struct MenuBarView: View {
                 }
                 .buttonStyle(.plain)
 
+                Button("Refresh Context") {
+                    appState.knowledgeBaseService.refreshCache()
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+
                 Spacer()
 
                 Text("Last active: just now")
